@@ -15,6 +15,9 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.concordia.insha.analyzer.GAnalyzer;
+import com.concordia.insha.analyzer.IEAnalyzer;
+import com.concordia.insha.collector.NetworkCollector;
 import com.concordia.insha.defender.DefenderDBHelper;
 import com.concordia.insha.defender.DefenderTask;
 import com.concordia.insha.collector.MemoryCollector;
@@ -22,6 +25,10 @@ import com.concordia.insha.collector.EventCollector;
 import com.concordia.insha.collector.CPUUsageCollector;
 
 import com.concordia.insha.collector.ProcessCollector;
+import com.concordia.insha.detector.GDetector;
+import com.concordia.insha.detector.IEDetector;
+import com.concordia.insha.detector.ThreatDetector;
+import com.concordia.insha.model.APackage;
 
 
 public class DefenderService extends Service {
@@ -52,7 +59,7 @@ public class DefenderService extends Service {
     public void startDetection(){
         eventCollector = new EventCollector();
 
-        DefenderDBHelper defenderDB = DefenderDBHelper.getInstance(this);
+        DefenderDBHelper aidsDB = DefenderDBHelper.getInstance(this);
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_SCREEN_ON);
@@ -60,13 +67,34 @@ public class DefenderService extends Service {
 
         registerReceiver(eventCollector, filter);
 
+        IntentFilter packageFilter = new IntentFilter();
+        packageFilter.addAction(Intent.ACTION_PACKAGE_ADDED);
+        packageFilter.addDataScheme("package");
+
+        registerReceiver(eventCollector, packageFilter);
+
+        PackageManager pMgr = this.getPackageManager();
+        List<PackageInfo> pInfoList = pMgr
+                .getInstalledPackages(PackageManager.GET_PERMISSIONS);
+
+        for (PackageInfo pi : pInfoList) {
+
+            APackage pkg = APackage.InstanceFromPackageInfo(pi);
+            aidsDB.insertPackage(pkg);
+        }
 
         final ArrayList<DefenderTask> idsTasks = new ArrayList<DefenderTask>();
 
         idsTasks.add(new ProcessCollector());
-        idsTasks.add(new MemoryCollector());
-        idsTasks.add(new MemoryCollector());
         idsTasks.add(new CPUUsageCollector());
+        idsTasks.add(new MemoryCollector());
+        idsTasks.add(new NetworkCollector());
+
+        idsTasks.add(new IEAnalyzer());
+        idsTasks.add(new IEDetector());
+        idsTasks.add(new GAnalyzer());
+        idsTasks.add(new GDetector());
+        idsTasks.add(new ThreatDetector());
 
 
         triggerTimerTask = new TimerTask() {

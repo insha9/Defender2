@@ -100,7 +100,7 @@ Antes: fin*/
                             Log.d("HORROR1","lista["+i+"]= "+ lista[i]);
                         }
                     }
-                    String cpuUsage=lis.get(8)+"%";
+                    String cpuUsage=lis.get(8);
                     String cpuUsa=lis.get(8);
                     String pid = lis.get(0);
 
